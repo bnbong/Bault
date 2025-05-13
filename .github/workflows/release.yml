@@ -1,0 +1,35 @@
+name: Release Flutter App
+
+on:
+  workflow_run:
+    workflows: ["Build Flutter App"]
+    types:
+      - completed
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apk
+          path: ./release-apk
+
+      - name: Download App Bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: release-bundle
+          path: ./release-bundle
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./release-apk/app-release.apk
+            ./release-bundle/app-release.aab
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
