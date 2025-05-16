@@ -45,13 +45,23 @@ dependencies:
   # 구글 드라이브 연동
   googleapis: ^11.4.0
   googleapis_auth: ^1.4.1
+  # 구글 로그인
+  google_sign_in: ^6.2.1
+  # HTTP 클라이언트
+  http: ^1.2.0
   # UI 컴포넌트
   flutter_secure_storage: ^9.0.0
   flutter_slidable: ^3.0.1
+  # 유틸리티
+  uuid: ^4.3.3
+  flutter_riverpod: ^2.4.9
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # 테스트 모킹 라이브러리
+  mockito: ^5.4.4
+  build_runner: ^2.4.8
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -101,3 +111,9 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: NotoSansKR
+      fonts:
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
+        - asset: assets/fonts/NotoSansKR-Bold.ttf
+          weight: 700
