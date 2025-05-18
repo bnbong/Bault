@@ -64,19 +64,53 @@ class LocalBiometricService implements BiometricService {
   Future<bool> authenticate(String localizedReason) async {
     // 웹 환경이거나 생체인식 서비스가 초기화되지 않았으면 항상 false 반환
     if (kIsWeb || _localAuth == null) {
+      debugPrint('생체인식 인증 불가: 웹 환경이거나 생체인식 서비스 미초기화');
       return false;
     }
 
     try {
-      return await _localAuth.authenticate(
+      final isDeviceSupported = await _localAuth.isDeviceSupported();
+      if (!isDeviceSupported) {
+        debugPrint('생체인식 인증 불가: 기기가 생체인식을 지원하지 않음');
+        return false;
+      }
+
+      final canCheck = await _localAuth.canCheckBiometrics;
+      if (!canCheck) {
+        debugPrint('생체인식 인증 불가: 생체인식 검사 기능 사용 불가');
+        return false;
+      }
+
+      // 사용 가능한 생체인식 유형 확인
+      final availableBiometrics = await _localAuth.getAvailableBiometrics();
+      debugPrint('사용 가능한 생체인식: $availableBiometrics');
+
+      if (availableBiometrics.isEmpty) {
+        debugPrint('사용 가능한 생체인식 없음');
+        return false;
+      }
+
+      final hasFaceID = availableBiometrics.contains(BiometricType.face);
+      final hasFingerprint =
+          availableBiometrics.contains(BiometricType.fingerprint);
+
+      debugPrint('Face ID 사용 가능: $hasFaceID, 지문 사용 가능: $hasFingerprint');
+
+      // 인증 시도
+      final authenticated = await _localAuth.authenticate(
         localizedReason: localizedReason,
         options: const AuthenticationOptions(
           stickyAuth: true,
-          biometricOnly: true,
+          biometricOnly: false,
+          useErrorDialogs: true,
         ),
       );
+
+      debugPrint('생체인식 인증 결과: $authenticated');
+      return authenticated;
     } on PlatformException catch (e) {
-      debugPrint('생체인식 인증 실패: $e');
+      debugPrint(
+          '생체인식 인증 PlatformException: ${e.message}, code: ${e.code}, details: ${e.details}');
       return false;
     } catch (e) {
       debugPrint('생체인식 인증 중 예상치 못한 오류: $e');

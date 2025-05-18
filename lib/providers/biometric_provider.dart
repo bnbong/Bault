@@ -74,12 +74,45 @@ class BiometricStateNotifier extends StateNotifier<AsyncValue<bool>> {
     try {
       // 웹 환경에서는 생체인식을 사용할 수 없음
       if (kIsWeb) {
+        debugPrint('생체인식 인증 불가: 웹 환경');
         return false;
       }
 
-      return await _biometricService.authenticate(localizedReason);
+      // 생체인식 타임아웃 설정
+      bool timeoutOccurred = false;
+
+      final timeout = Future.delayed(const Duration(seconds: 10), () {
+        timeoutOccurred = true;
+        debugPrint('생체인식 인증 타임아웃 발생');
+        return false;
+      });
+
+      final isAvailable = await _biometricService.isBiometricsAvailable();
+      if (!isAvailable) {
+        debugPrint('생체인식 인증 불가: 생체인식 사용 불가');
+        return false;
+      }
+
+      final isEnrolled = await _biometricService.isBiometricsEnrolled();
+      if (!isEnrolled) {
+        debugPrint('생체인식 인증 불가: 생체인식 등록되지 않음');
+        return false;
+      }
+
+      // 인증 실행
+      final authFuture = _biometricService.authenticate(localizedReason);
+
+      final result = await Future.any([authFuture, timeout]);
+
+      if (timeoutOccurred) {
+        debugPrint('생체인식 인증이 타임아웃으로 취소됨');
+        return false;
+      }
+
+      debugPrint('생체인식 인증 결과: $result');
+      return result;
     } catch (e) {
-      debugPrint('생체인식 인증 실패: $e');
+      debugPrint('생체인식 인증 중 예외 발생: $e');
       return false;
     }
   }
