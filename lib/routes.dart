@@ -9,6 +9,7 @@ import 'screens/password/password_form_screen.dart';
 import 'screens/password/password_detail_screen.dart';
 import 'screens/settings/auth_settings_screen.dart';
 import 'screens/settings/biometric_settings_screen.dart';
+import 'screens/sync_settings_screen.dart';
 import 'models/password_entry.dart';
 import 'models/auth_type.dart';
 
@@ -23,6 +24,7 @@ const String addPasswordRoute = '/add-password';
 const String passwordDetailsRoute = '/password-details';
 const String settingsRoute = '/settings';
 const String biometricSettingsRoute = '/biometric-settings';
+const String syncSettingsRoute = '/sync-settings';
 
 // 앱 라우트 정의
 Map<String, WidgetBuilder> getAppRoutes() {
@@ -58,5 +60,6 @@ Map<String, WidgetBuilder> getAppRoutes() {
     },
     settingsRoute: (context) => const AuthSettingsScreen(),
     biometricSettingsRoute: (context) => const BiometricSettingsScreen(),
+    syncSettingsRoute: (context) => const SyncSettingsScreen(),
   };
 }

@@ -55,6 +55,10 @@ dependencies:
   # 유틸리티
   uuid: ^4.3.3
   flutter_riverpod: ^2.4.9
+  # 파일 시스템 접근
+  path_provider: ^2.0.15
+  # 날짜 포맷팅
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:

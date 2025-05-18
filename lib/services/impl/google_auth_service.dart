@@ -145,6 +145,55 @@ class GoogleAuthService implements AuthService {
   Future<bool> isGoogleSignedIn() async {
     return _googleSignIn.isSignedIn();
   }
+
+  @override
+  Future<bool> isAuthenticated() async {
+    // 구글 계정 로그인 상태 확인
+    return await isGoogleSignedIn();
+  }
+
+  @override
+  Future<bool> signIn() async {
+    // 구글 계정으로 로그인 시도
+    try {
+      final account = await _googleSignIn.signInSilently();
+      if (account == null) {
+        // 자동 로그인 실패 시 수동 로그인 시도
+        return await signInWithGoogle();
+      }
+
+      final auth = await account.authentication;
+      await _prefs.setString(_googleTokenKey, auth.accessToken ?? '');
+
+      // 사용자 정보 업데이트
+      final user = await getUser();
+      await updateUser(
+        user.copyWith(
+          isGoogleAccountLinked: true,
+          lastLoginAt: DateTime.now(),
+        ),
+      );
+
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<http.Client?> getAuthClient() async {
+    try {
+      final account = await _googleSignIn.signInSilently();
+      if (account == null) {
+        return null;
+      }
+
+      final auth = await account.authentication;
+      return GoogleHttpClient(auth);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 class GoogleHttpClient extends http.BaseClient {

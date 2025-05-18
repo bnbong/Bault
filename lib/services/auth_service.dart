@@ -1,4 +1,5 @@
 import '../models/auth_user.dart';
+import 'package:http/http.dart' as http;
 
 abstract class AuthService {
   /// 마스터 비밀번호 설정 여부 확인
@@ -42,4 +43,13 @@ abstract class AuthService {
 
   /// 사용자 정보 업데이트
   Future<void> updateUser(AuthUser user);
+
+  /// 구글 계정 로그인 여부 확인
+  Future<bool> isAuthenticated();
+
+  /// 구글 계정 로그인
+  Future<bool> signIn();
+
+  /// 구글 드라이브 API 사용을 위한 인증 클라이언트 가져오기
+  Future<http.Client?> getAuthClient();
 }

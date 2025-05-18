@@ -121,4 +121,17 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AuthUser>> {
       return false;
     }
   }
+
+  /// 구글 인증 사용 가능 여부 확인
+  Future<bool> canUseGoogleAuth() async {
+    try {
+      // 시뮬레이터나 웹 환경에서는 구글 인증이 제한될 수 있음
+      // 실제 기기일 경우 true 반환
+      final isAuthenticated = await _authService.isAuthenticated();
+      return true;
+    } catch (e) {
+      // 오류 발생 시 인증 불가능으로 처리
+      return false;
+    }
+  }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import '../../models/auth_user.dart';
 import '../auth_service.dart';
 import '../encryption_service.dart';
@@ -135,5 +136,30 @@ class LocalAuthService implements AuthService {
   @override
   Future<void> updateUser(AuthUser user) async {
     await _prefs.setString(_userKey, jsonEncode(user.toJson()));
+  }
+
+  @override
+  Future<bool> isAuthenticated() async {
+    // 로컬 인증은 마스터 비밀번호 설정 여부로 인증 상태 확인
+    return await isMasterPasswordSet();
+  }
+
+  @override
+  Future<bool> signIn() async {
+    // 로컬 인증 서비스에서는 기본적으로 마스터 비밀번호 사용
+    // 이 메서드는 비밀번호 검증 없이 로그인 처리만 수행함 (주로 생체인식 등에서 호출)
+    final user = await getUser();
+    await updateUser(
+      user.copyWith(
+        lastLoginAt: DateTime.now(),
+      ),
+    );
+    return true;
+  }
+
+  @override
+  Future<http.Client?> getAuthClient() async {
+    // 로컬 인증 서비스에서는 인증 클라이언트 지원 안함
+    return null;
   }
 }

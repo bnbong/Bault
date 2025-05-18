@@ -2,67 +2,34 @@ import '../models/password_entry.dart';
 import 'encryption_service.dart';
 import 'password_repository.dart';
 
-class PasswordService {
-  final PasswordRepository _repository;
-  final EncryptionService _encryptionService;
+abstract class PasswordService {
+  /// 모든 비밀번호 가져오기
+  Future<List<PasswordEntry>> getAll();
 
-  PasswordService({
-    required PasswordRepository repository,
-    required EncryptionService encryptionService,
-  })  : _repository = repository,
-        _encryptionService = encryptionService;
+  /// ID로 비밀번호 가져오기
+  Future<PasswordEntry?> getById(String id);
 
-  Future<List<PasswordEntry>> getAll() async {
-    final entries = await _repository.getAll();
-    return entries.map((entry) => _decryptEntry(entry)).toList();
-  }
+  /// 검색어로 비밀번호 검색
+  Future<List<PasswordEntry>> search(String query);
 
-  Future<PasswordEntry?> getById(String id) async {
-    final entry = await _repository.getById(id);
-    if (entry == null) return null;
-    return _decryptEntry(entry);
-  }
+  /// 비밀번호 추가
+  Future<void> add(PasswordEntry entry);
 
-  Future<List<PasswordEntry>> search(String query) async {
-    final entries = await _repository.search(query);
-    return entries.map((entry) => _decryptEntry(entry)).toList();
-  }
+  /// 비밀번호 수정
+  Future<void> update(PasswordEntry entry);
 
-  Future<void> add(PasswordEntry entry) async {
-    final encryptedEntry = _encryptEntry(entry);
-    await _repository.add(encryptedEntry);
-  }
+  /// 비밀번호 삭제
+  Future<void> delete(String id);
 
-  Future<void> update(PasswordEntry entry) async {
-    final encryptedEntry = _encryptEntry(entry);
-    await _repository.update(encryptedEntry);
-  }
+  /// 모든 비밀번호 삭제
+  Future<void> clear();
 
-  Future<void> delete(String id) async {
-    await _repository.delete(id);
-  }
+  /// 모든 비밀번호를 Map 형태로 가져오기 (동기화용)
+  Future<Map<String, dynamic>> getAllPasswords();
 
-  Future<void> clear() async {
-    await _repository.clear();
-  }
+  /// ID로 비밀번호 업데이트 (동기화용)
+  Future<void> updatePassword(String id, dynamic data);
 
-  PasswordEntry _encryptEntry(PasswordEntry entry) {
-    return PasswordEntry(
-      id: entry.id,
-      serviceName: entry.serviceName,
-      password: _encryptionService.encrypt(entry.password),
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    );
-  }
-
-  PasswordEntry _decryptEntry(PasswordEntry entry) {
-    return PasswordEntry(
-      id: entry.id,
-      serviceName: entry.serviceName,
-      password: _encryptionService.decrypt(entry.password),
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt,
-    );
-  }
+  /// 백업에서 비밀번호 복원 (동기화용)
+  Future<void> restorePasswordsFromBackup(Map<String, dynamic> backup);
 }

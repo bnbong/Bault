@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' as provider_pkg;
 import '../../providers/auth_provider.dart';
 import '../../providers/biometric_provider.dart';
+import '../../providers/sync_provider.dart';
+import '../../services/sync_service_factory.dart';
 
 class AuthSettingsScreen extends ConsumerWidget {
   const AuthSettingsScreen({super.key});
@@ -10,6 +13,7 @@ class AuthSettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
     final biometricState = ref.watch(biometricProvider);
+    final syncProvider = provider_pkg.Provider.of<SyncProvider>(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -59,6 +63,22 @@ class AuthSettingsScreen extends ConsumerWidget {
               ),
               const Divider(),
 
+              // 동기화 설정
+              ListTile(
+                title: const Text('데이터 동기화 설정'),
+                leading: const Icon(Icons.sync),
+                subtitle: Text(
+                  syncProvider.isSyncEnabled
+                      ? '동기화가 활성화되어 있습니다. (${syncProvider.currentSyncType == SyncType.googleDrive ? '구글 드라이브' : '로컬 저장소'})'
+                      : '데이터 동기화 설정을 구성합니다.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.pushNamed(context, '/sync-settings');
+                },
+              ),
+              const Divider(),
+
               // 구글 계정 연동
               ListTile(
                 title: Text(
@@ -74,6 +94,8 @@ class AuthSettingsScreen extends ConsumerWidget {
                     ? const Icon(Icons.check_circle, color: Colors.green)
                     : const Icon(Icons.chevron_right),
                 onTap: () async {
+                  debugPrint('구글 계정 연동 버튼 클릭: ${user.isGoogleAccountLinked}');
+
                   if (user.isGoogleAccountLinked) {
                     final confirmed = await showDialog<bool>(
                       context: context,
@@ -99,9 +121,53 @@ class AuthSettingsScreen extends ConsumerWidget {
 
                     if (confirmed == true) {
                       await ref.read(authProvider.notifier).signOutFromGoogle();
+
+                      // 구글 드라이브 동기화 중이었다면 로컬 동기화로 변경
+                      if (syncProvider.currentSyncType ==
+                          SyncType.googleDrive) {
+                        await syncProvider.changeSyncType(SyncType.local);
+                      }
                     }
                   } else {
-                    await ref.read(authProvider.notifier).signInWithGoogle();
+                    // 시뮬레이터/웹에서 실행 중인지 확인
+                    if (Theme.of(context).platform == TargetPlatform.iOS &&
+                        !await ref
+                            .read(authProvider.notifier)
+                            .canUseGoogleAuth()) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                              'iOS 시뮬레이터에서는 구글 계정 연동이 제한됩니다. 실제 기기에서 사용해주세요.'),
+                          duration: Duration(seconds: 3),
+                        ),
+                      );
+                      return;
+                    }
+
+                    // 구글 로그인 시도
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('구글 계정 연동 중...'),
+                          duration: Duration(seconds: 1)),
+                    );
+
+                    final success = await ref
+                        .read(authProvider.notifier)
+                        .signInWithGoogle();
+
+                    if (context.mounted) {
+                      if (!success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('구글 계정 연동에 실패했습니다.')),
+                        );
+                        return;
+                      }
+                    }
+
+                    // 구글 로그인 성공 시 동기화 방식 선택 제안
+                    if (success && context.mounted) {
+                      _showSyncTypeSelectionDialog(context, syncProvider);
+                    }
                   }
                 },
               ),
@@ -149,6 +215,41 @@ class AuthSettingsScreen extends ConsumerWidget {
         error: (error, _) => Center(
           child: Text('오류가 발생했습니다: $error'),
         ),
+      ),
+    );
+  }
+
+  // 구글 계정 연동 후 동기화 방식 선택 다이얼로그
+  void _showSyncTypeSelectionDialog(
+      BuildContext context, SyncProvider syncProvider) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('구글 드라이브 동기화'),
+        content: const Text(
+          '구글 계정 연동이 성공했습니다. 구글 드라이브를 이용하여 데이터를 동기화하시겠습니까?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('나중에'),
+          ),
+          TextButton(
+            onPressed: () async {
+              await syncProvider.changeSyncType(SyncType.googleDrive);
+              await syncProvider.enableSync();
+              if (context.mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('구글 드라이브 동기화가 활성화되었습니다.')),
+                );
+              }
+            },
+            child: const Text('활성화'),
+          ),
+        ],
       ),
     );
   }

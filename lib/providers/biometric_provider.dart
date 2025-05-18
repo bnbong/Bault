@@ -39,7 +39,7 @@ class BiometricStateNotifier extends StateNotifier<AsyncValue<bool>> {
       final isAvailable = await _biometricService.isBiometricsAvailable();
       final isEnrolled = await _biometricService.isBiometricsEnrolled();
       state = AsyncValue.data(isAvailable && isEnrolled);
-    } catch (e, stack) {
+    } catch (e, stack) {  // ignore: unused_catch_stack
       debugPrint('생체인식 상태 확인 실패: $e');
       state = const AsyncValue.data(false); // 오류 발생 시 생체인식을 비활성화
     }
@@ -54,7 +54,7 @@ class BiometricStateNotifier extends StateNotifier<AsyncValue<bool>> {
 
       await _biometricService.enrollBiometrics();
       state = const AsyncValue.data(true);
-    } catch (e, stack) {
+    } catch (e, stack) {  // ignore: unused_catch_stack
       debugPrint('생체인식 등록 실패: $e');
       state = const AsyncValue.data(false); // 오류 발생 시 생체인식을 비활성화
     }
