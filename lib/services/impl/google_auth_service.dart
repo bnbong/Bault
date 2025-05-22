@@ -5,6 +5,9 @@ import 'package:http/http.dart' as http;
 import '../../models/auth_user.dart';
 import '../auth_service.dart';
 import 'local_auth_service.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 
 class GoogleAuthService implements AuthService {
   final GoogleSignIn _googleSignIn;
@@ -17,8 +20,22 @@ class GoogleAuthService implements AuthService {
     'https://www.googleapis.com/auth/drive.appdata',
   ];
 
+  static String get _webClientId => dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
+  static String get _iosClientId => dotenv.env['GOOGLE_IOS_CLIENT_ID'] ?? '';
+  static String get _androidClientId =>
+      dotenv.env['GOOGLE_ANDROID_CLIENT_ID'] ?? '';
+
   GoogleAuthService(this._prefs, this._localAuthService)
-      : _googleSignIn = GoogleSignIn(scopes: _scopes);
+      : _googleSignIn = GoogleSignIn(
+          scopes: _scopes,
+          clientId: Platform.isIOS
+              ? _iosClientId
+              : Platform.isAndroid
+                  ? _androidClientId
+                  : _webClientId,
+          serverClientId: _webClientId,
+          signInOption: SignInOption.standard,
+        );
 
   @override
   Future<bool> isMasterPasswordSet() async {
@@ -74,11 +91,17 @@ class GoogleAuthService implements AuthService {
   @override
   Future<bool> signInWithGoogle() async {
     try {
+      debugPrint('구글 로그인 시도...');
+      debugPrint(
+          '클라이언트 ID: ${Platform.isIOS ? _iosClientId : Platform.isAndroid ? _androidClientId : _webClientId}');
+
       final account = await _googleSignIn.signIn();
       if (account == null) {
+        debugPrint('구글 로그인 취소됨');
         return false;
       }
 
+      debugPrint('구글 계정 선택됨: ${account.email}');
       final auth = await account.authentication;
       await _prefs.setString(_googleTokenKey, auth.accessToken ?? '');
 
@@ -91,8 +114,10 @@ class GoogleAuthService implements AuthService {
         ),
       );
 
+      debugPrint('구글 로그인 성공');
       return true;
     } catch (e) {
+      debugPrint('구글 로그인 실패: $e');
       return false;
     }
   }

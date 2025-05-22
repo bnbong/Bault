@@ -43,9 +43,9 @@ class ServiceLocator {
     // 로컬 인증 서비스 생성
     final localAuthService = LocalAuthService(_prefs, _encryptionService);
     // 구글 인증 서비스 생성
-    // _authService = GoogleAuthService(_prefs, localAuthService);
+    _authService = GoogleAuthService(_prefs, localAuthService);
     // Default : 로컬 인증 사용
-    _authService = localAuthService;
+    // _authService = localAuthService;
 
     // 저장소 선택 (로컬 또는 구글 드라이브)
     _passwordRepository = LocalPasswordRepository(_prefs);
