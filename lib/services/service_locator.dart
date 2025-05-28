@@ -1,5 +1,5 @@
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'auth_service.dart';
 import 'biometric_service.dart';
 import 'clipboard_service.dart';
@@ -32,69 +32,44 @@ class ServiceLocator {
   AuthService? _authService;
   SyncService? _syncService;
 
-  Future<void> init() async {
+  Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
     _clipboardService = impl.FlutterClipboardService();
     _biometricService = LocalBiometricService(_prefs);
 
-    // 임시 암호화 서비스로 로컬 인증 서비스 생성
-    final tempEncryptionService = AESEncryptionService('temp-key-for-init');
+    final tempEncryptionService = AESEncryptionService('temp');
     final localAuthService = LocalAuthService(_prefs, tempEncryptionService);
-    // 구글 인증 서비스 생성
     _authService = GoogleAuthService(_prefs, localAuthService);
   }
 
   /// 마스터 비밀번호로 암호화 서비스 초기화
   Future<void> initializeWithMasterPassword(String masterPassword) async {
-    debugPrint('🔧 ServiceLocator.initializeWithMasterPassword 시작');
-
-    // 암호화 서비스 생성
-    debugPrint('🔧 암호화 서비스 생성 시작');
     _encryptionService = AESEncryptionService(masterPassword);
-    debugPrint('🔧 암호화 서비스 생성 완료');
 
-    // 로컬 인증 서비스를 실제 암호화 서비스로 재생성
-    debugPrint('🔧 로컬 인증 서비스 재생성 시작');
     final localAuthService = LocalAuthService(_prefs, _encryptionService!);
-    debugPrint('🔧 로컬 인증 서비스 재생성 완료');
-
-    // 구글 인증 서비스 재생성
-    debugPrint('🔧 구글 인증 서비스 재생성 시작');
     _authService = GoogleAuthService(_prefs, localAuthService);
-    debugPrint('🔧 구글 인증 서비스 재생성 완료');
 
-    // 저장소 선택 (로컬 또는 구글 드라이브)
-    debugPrint('🔧 비밀번호 저장소 생성 시작');
     _passwordRepository = LocalPasswordRepository(_prefs);
-    debugPrint('🔧 비밀번호 저장소 생성 완료');
 
-    // 비밀번호 서비스 생성
-    debugPrint('🔧 비밀번호 서비스 생성 시작');
     _passwordService = PasswordServiceImpl(
       repository: _passwordRepository!,
       encryptionService: _encryptionService!,
     );
-    debugPrint('🔧 비밀번호 서비스 생성 완료');
 
-    // 동기화 서비스 생성 (웹에서는 조건부 생성)
     try {
-      debugPrint('🔧 동기화 서비스 생성 시작');
       _syncService = await SyncServiceFactory.createSyncService(
         authService: _authService!,
         passwordService: _passwordService!,
         encryptionService: _encryptionService!,
       );
-      debugPrint('🔧 동기화 서비스 생성 완료');
     } catch (e) {
-      debugPrint('🔧 동기화 서비스 초기화 실패: $e');
       if (kIsWeb) {
-        debugPrint('🔧 웹 플랫폼에서는 일부 동기화 기능이 제한됩니다.');
+        if (kDebugMode) {
+          debugPrint('웹 플랫폼에서는 일부 동기화 기능이 제한됩니다.');
+        }
       }
-      // 웹에서는 동기화 서비스 없이 진행
       _syncService = null;
     }
-
-    debugPrint('🔧 ServiceLocator.initializeWithMasterPassword 완료');
   }
 
   PasswordService get passwordService {
@@ -117,13 +92,11 @@ class ServiceLocator {
     }
 
     try {
-      // 이미 동일한 유형인 경우 변경하지 않음
       final currentType = await SyncServiceFactory.getCurrentSyncType();
       if (currentType == newType) {
         return;
       }
 
-      // 새로운 동기화 서비스 생성
       final newService = await SyncServiceFactory.changeSyncType(
         newType: newType,
         authService: _authService!,
@@ -131,17 +104,12 @@ class ServiceLocator {
         encryptionService: _encryptionService!,
       );
 
-      // 새 서비스로 대체
       _syncService = newService;
     } catch (e) {
-      debugPrint('동기화 유형 변경 중 오류 발생: $e');
-      // 기존 서비스를 계속 사용
+      if (kDebugMode) {
+        debugPrint('동기화 유형 변경 중 오류 발생: $e');
+      }
       rethrow;
     }
-  }
-
-  // TODO: 구글 드라이브 클라이언트 초기화 구현
-  Future<AuthClient> _getGoogleDriveClient() async {
-    throw UnimplementedError('구글 드라이브 클라이언트 초기화가 필요합니다.');
   }
 }

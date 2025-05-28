@@ -59,10 +59,7 @@ class SyncSettingsScreen extends ConsumerWidget {
       BuildContext context, SyncProvider syncProvider, WidgetRef ref) {
     // 구글 계정 로그인 상태 확인
     final authState = ref.watch(authProvider);
-    final isGoogleAccountLinked = authState.maybeWhen(
-      data: (user) => user.isGoogleAccountLinked,
-      orElse: () => false,
-    );
+    final isGoogleAccountLinked = authState?.isGoogleAccountLinked ?? false;
 
     return Card(
       child: Column(

@@ -19,27 +19,21 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
 
-    return authState.when(
-      data: (user) {
-        // 마스터 비밀번호가 설정되어 있지 않으면 초기 설정 화면
-        if (!user.isMasterPasswordSet) {
-          return const MasterPasswordSetupScreen();
-        }
-
-        // 마스터 비밀번호가 설정되어 있으면 인증 화면
-        return const AuthScreen();
-      },
-      loading: () => const Scaffold(
+    if (authState == null) {
+      return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
         ),
-      ),
-      error: (error, _) => Scaffold(
-        body: Center(
-          child: Text('오류가 발생했습니다: $error'),
-        ),
-      ),
-    );
+      );
+    }
+
+    // 마스터 비밀번호가 설정되어 있지 않으면 초기 설정 화면
+    if (!authState.isMasterPasswordSet) {
+      return const MasterPasswordSetupScreen();
+    }
+
+    // 마스터 비밀번호가 설정되어 있으면 인증 화면
+    return const AuthScreen();
   }
 }
 

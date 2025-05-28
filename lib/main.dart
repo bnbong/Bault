@@ -10,7 +10,7 @@ import 'screens/auth/master_password_setup_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ServiceLocator().init();
+  await ServiceLocator().initialize();
   runApp(
     ProviderScope(
       child: provider_pkg.MultiProvider(
@@ -46,7 +46,7 @@ class MyApp extends ConsumerWidget {
       themeMode: ThemeMode.system,
       routes: getAppRoutes(),
       home: FutureBuilder<bool>(
-        future: ref.read(authProvider.notifier).hasMasterPassword(),
+        future: ref.read(authProvider.notifier).isMasterPasswordSet(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Scaffold(

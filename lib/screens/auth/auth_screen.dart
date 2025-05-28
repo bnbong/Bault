@@ -76,7 +76,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _authenticateWithBiometrics() async {
-    // 웹 환경에서는 생체인식 시도하지 않음
     if (kIsWeb) return;
 
     try {
@@ -97,12 +96,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           await ref.read(biometricProvider.notifier).authenticate(reason);
 
       if (isAuthenticated && mounted) {
-        debugPrint('생체인식 인증 성공: ${widget.authType} 인증 완료');
         _handleAuthSuccess();
       }
     } catch (e) {
-      debugPrint('생체인식 인증 중 오류 발생: $e');
-      // 오류 발생 시 마스터 비밀번호로 인증하도록 안내
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('생체인식을 사용할 수 없습니다. 마스터 비밀번호를 입력해주세요.')),
@@ -137,19 +133,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
 
     final password = _passwordController.text;
-    debugPrint('비밀번호 검증 시도: $password');
-
     final isValid =
         await ref.read(authProvider.notifier).verifyMasterPassword(password);
-
-    debugPrint('비밀번호 검증 결과: $isValid');
 
     setState(() {
       _isLoading = false;
     });
 
     if (isValid && mounted) {
-      debugPrint('비밀번호 인증 성공: ${widget.authType} 인증 완료');
       _handleAuthSuccess();
     } else if (mounted) {
       final attempts = await ref.read(authProvider.notifier).getLoginAttempts();
@@ -157,7 +148,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         _errorMessage = '비밀번호가 올바르지 않습니다. ($attempts/5)';
       });
 
-      // 로그인 제한 확인
       final isNowLocked = await ref.read(authProvider.notifier).isLoginLocked();
       if (isNowLocked) {
         final lockoutTime =
@@ -170,15 +160,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   void _handleAuthSuccess() {
-    // 인증 유형에 따라 다른 동작 수행
     if (widget.onAuthSuccess != null) {
-      // 콜백이 제공된 경우 콜백 실행
       widget.onAuthSuccess!();
     } else if (widget.nextRoute != null) {
-      // 다음 라우트가 제공된 경우 해당 라우트로 이동
       Navigator.pushReplacementNamed(context, widget.nextRoute!);
     } else {
-      // 기본 동작: 앱 인증 후 홈 화면으로 이동
       Navigator.pushReplacementNamed(context, '/home');
     }
   }
