@@ -42,6 +42,7 @@ dependencies:
   local_auth: ^2.1.8
   # 암호화
   encrypt: ^5.0.3
+  crypto: ^3.0.3
   # 구글 드라이브 연동
   googleapis: ^11.4.0
   googleapis_auth: ^1.4.1
@@ -59,8 +60,6 @@ dependencies:
   path_provider: ^2.0.15
   # 날짜 포맷팅
   intl: ^0.18.1
-  # 환경 변수 관리
-  flutter_dotenv: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -88,9 +87,6 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  assets:
-    - .env
-    - .env.example
   # assets:
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

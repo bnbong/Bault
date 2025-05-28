@@ -5,6 +5,7 @@ import 'package:bault/models/sync_status.dart';
 import 'package:bault/providers/sync_provider.dart';
 import 'package:bault/services/sync_service_factory.dart';
 import 'package:bault/providers/auth_provider.dart';
+import 'package:flutter/foundation.dart';
 
 /// 동기화 설정 화면
 class SyncSettingsScreen extends ConsumerWidget {
@@ -66,17 +67,19 @@ class SyncSettingsScreen extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          RadioListTile<SyncType>(
-            title: const Text('로컬 저장소'),
-            subtitle: const Text('기기 내부 저장소에 안전하게 보관'),
-            value: SyncType.local,
-            groupValue: syncProvider.currentSyncType,
-            onChanged: (SyncType? value) {
-              if (value != null) {
-                syncProvider.changeSyncType(value);
-              }
-            },
-          ),
+          // 웹에서는 로컬 저장소 옵션 숨김
+          if (!kIsWeb)
+            RadioListTile<SyncType>(
+              title: const Text('로컬 저장소'),
+              subtitle: const Text('기기 내부 저장소에 안전하게 보관'),
+              value: SyncType.local,
+              groupValue: syncProvider.currentSyncType,
+              onChanged: (SyncType? value) {
+                if (value != null) {
+                  syncProvider.changeSyncType(value);
+                }
+              },
+            ),
           RadioListTile<SyncType>(
             title: const Text('구글 드라이브'),
             subtitle: Text(isGoogleAccountLinked
@@ -142,7 +145,7 @@ class SyncSettingsScreen extends ConsumerWidget {
             '모든 데이터는 암호화되어 안전하게 저장됩니다.';
         break;
       case SyncType.local:
-      default:  // ignore: unreachable_switch_default
+      default: // ignore: unreachable_switch_default
         description = '모든 데이터가 이 기기에만 저장됩니다. '
             '정기적인 백업을 통해 데이터 손실을 방지하세요.';
         break;
@@ -219,7 +222,7 @@ class SyncSettingsScreen extends ConsumerWidget {
         break;
       case SyncStatus.waiting:
       case SyncStatus.notStarted:
-      default:  // ignore: unreachable_switch_default
+      default: // ignore: unreachable_switch_default
         statusIcon = Icons.info;
         statusColor = Colors.grey;
         statusText = '대기 중';

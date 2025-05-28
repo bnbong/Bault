@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/auth_user.dart';
 import '../services/auth_service.dart';
 import '../services/service_locator.dart';
+import 'package:flutter/foundation.dart';
 
 final authProvider =
     StateNotifierProvider<AuthStateNotifier, AsyncValue<AuthUser>>((ref) {
@@ -43,10 +44,26 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AuthUser>> {
 
   Future<bool> setMasterPassword(String password) async {
     try {
+      debugPrint('🔐 마스터 비밀번호 설정 시작');
+      debugPrint('🔐 비밀번호 길이: ${password.length}');
+
+      debugPrint('🔐 AuthService.setMasterPassword 호출 시작');
       await _authService.setMasterPassword(password);
+      debugPrint('🔐 AuthService.setMasterPassword 완료');
+
+      debugPrint('🔐 ServiceLocator.initializeWithMasterPassword 호출 시작');
+      await ServiceLocator().initializeWithMasterPassword(password);
+      debugPrint('🔐 ServiceLocator.initializeWithMasterPassword 완료');
+
+      debugPrint('🔐 사용자 정보 로드 시작');
       await _loadUser();
+      debugPrint('🔐 사용자 정보 로드 완료');
+
+      debugPrint('🔐 마스터 비밀번호 설정 성공');
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('🔐 마스터 비밀번호 설정 실패: $e');
+      debugPrint('🔐 스택 트레이스: $stackTrace');
       return false;
     }
   }
@@ -62,6 +79,8 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AuthUser>> {
       final isValid = await _authService.verifyMasterPassword(password);
       if (isValid) {
         await _authService.resetLoginAttempts();
+        // 마스터 비밀번호로 ServiceLocator의 암호화 서비스 초기화
+        await ServiceLocator().initializeWithMasterPassword(password);
         return true;
       } else {
         final attempts = await _authService.incrementLoginAttempts();
@@ -81,6 +100,8 @@ class AuthStateNotifier extends StateNotifier<AsyncValue<AuthUser>> {
       String currentPassword, String newPassword) async {
     try {
       await _authService.changeMasterPassword(currentPassword, newPassword);
+      // 새로운 마스터 비밀번호로 ServiceLocator의 암호화 서비스 재초기화
+      await ServiceLocator().initializeWithMasterPassword(newPassword);
       await _loadUser();
       return true;
     } catch (e) {

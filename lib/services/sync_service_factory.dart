@@ -30,6 +30,13 @@ class SyncServiceFactory {
     // 지정된 유형이 없으면 저장된 유형 사용
     SyncType type = syncType ?? await _getSavedSyncType();
 
+    // 웹 플랫폼에서는 로컬 동기화 서비스 사용 불가
+    if (kIsWeb && type == SyncType.local) {
+      debugPrint('웹 플랫폼에서는 로컬 동기화를 지원하지 않습니다. 구글 드라이브 동기화로 전환합니다.');
+      type = SyncType.googleDrive;
+      await _saveSyncType(SyncType.googleDrive);
+    }
+
     // 유형에 따라 서비스 생성
     switch (type) {
       case SyncType.googleDrive:
@@ -41,7 +48,10 @@ class SyncServiceFactory {
         );
 
       case SyncType.local:
-      default: // ignore: unreachable_switch_default
+        if (kIsWeb) {
+          // 웹에서는 예외 발생
+          throw UnsupportedError('웹 플랫폼에서는 로컬 동기화를 지원하지 않습니다.');
+        }
         await _saveSyncType(SyncType.local);
         return LocalSyncService(
           passwordService: passwordService,
@@ -57,14 +67,20 @@ class SyncServiceFactory {
       final typeIndex = prefs.getInt(_syncTypeKey);
 
       if (typeIndex != null && typeIndex < SyncType.values.length) {
-        return SyncType.values[typeIndex];
+        final savedType = SyncType.values[typeIndex];
+
+        // 웹에서 로컬 동기화가 저장되어 있으면 구글 드라이브로 변경
+        if (kIsWeb && savedType == SyncType.local) {
+          return SyncType.googleDrive;
+        }
+
+        return savedType;
       }
 
-      // 기본값
-      return SyncType.local;
+      // 기본값: 웹에서는 구글 드라이브, 모바일에서는 로컬
+      return kIsWeb ? SyncType.googleDrive : SyncType.local;
     } catch (e) {
-      debugPrint('동기화 유형 가져오기 실패: $e');
-      return SyncType.local;
+      return kIsWeb ? SyncType.googleDrive : SyncType.local;
     }
   }
 

@@ -5,3 +5,13 @@ repos:
     -   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
+
+-   repo: local
+    hooks:
+    -   id: check-sensitive-data
+        name: 민감한 정보 검사 및 환경변수 치환
+        entry: python3 scripts/check_sensitive_data.py
+        language: system
+        files: \.(plist|xml|html|json)$
+        pass_filenames: true
+        description: "구글 클라이언트 ID 등의 민감한 정보를 환경변수로 치환합니다"

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../../models/auth_user.dart';
 import '../auth_service.dart';
 import '../encryption_service.dart';
+import 'aes_encryption_service.dart';
 
 class LocalAuthService implements AuthService {
   final SharedPreferences _prefs;
@@ -24,17 +25,42 @@ class LocalAuthService implements AuthService {
 
   @override
   Future<void> setMasterPassword(String password) async {
-    final encryptedPassword = _encryptionService.encrypt(password);
-    await _prefs.setString(_passwordKey, encryptedPassword);
+    try {
+      debugPrint('🔑 LocalAuthService.setMasterPassword 시작');
+      debugPrint('🔑 비밀번호 길이: ${password.length}');
 
-    // 사용자 정보 업데이트
-    final user = await getUser();
-    await updateUser(
-      user.copyWith(
-        isMasterPasswordSet: true,
-        lastLoginAt: DateTime.now(),
-      ),
-    );
+      // 마스터 비밀번호를 키로 사용하는 임시 암호화 서비스 생성
+      debugPrint('🔑 AESEncryptionService 생성 시작');
+      final tempEncryptionService = AESEncryptionService(password);
+      debugPrint('🔑 AESEncryptionService 생성 완료');
+
+      debugPrint('🔑 비밀번호 암호화 시작');
+      final encryptedPassword = tempEncryptionService.encrypt(password);
+      debugPrint('🔑 비밀번호 암호화 완료, 암호화된 길이: ${encryptedPassword.length}');
+
+      debugPrint('🔑 SharedPreferences에 저장 시작');
+      await _prefs.setString(_passwordKey, encryptedPassword);
+      debugPrint('🔑 SharedPreferences에 저장 완료');
+
+      // 사용자 정보 업데이트
+      debugPrint('🔑 사용자 정보 로드 시작');
+      final user = await getUser();
+      debugPrint('🔑 사용자 정보 로드 완료');
+
+      debugPrint('🔑 사용자 정보 업데이트 시작');
+      await updateUser(
+        user.copyWith(
+          isMasterPasswordSet: true,
+          lastLoginAt: DateTime.now(),
+        ),
+      );
+      debugPrint('🔑 사용자 정보 업데이트 완료');
+      debugPrint('🔑 LocalAuthService.setMasterPassword 완료');
+    } catch (e, stackTrace) {
+      debugPrint('🔑 LocalAuthService.setMasterPassword 실패: $e');
+      debugPrint('🔑 스택 트레이스: $stackTrace');
+      rethrow;
+    }
   }
 
   @override
@@ -45,7 +71,18 @@ class LocalAuthService implements AuthService {
       throw Exception('현재 비밀번호가 올바르지 않습니다.');
     }
 
-    await setMasterPassword(newPassword);
+    // 새로운 비밀번호를 키로 사용하는 암호화 서비스 생성
+    final newEncryptionService = AESEncryptionService(newPassword);
+    final encryptedPassword = newEncryptionService.encrypt(newPassword);
+    await _prefs.setString(_passwordKey, encryptedPassword);
+
+    // 사용자 정보 업데이트
+    final user = await getUser();
+    await updateUser(
+      user.copyWith(
+        lastLoginAt: DateTime.now(),
+      ),
+    );
   }
 
   @override
@@ -56,7 +93,10 @@ class LocalAuthService implements AuthService {
     }
 
     try {
-      final decryptedPassword = _encryptionService.decrypt(encryptedPassword);
+      // 입력된 비밀번호를 키로 사용하는 암호화 서비스 생성
+      final tempEncryptionService = AESEncryptionService(password);
+      final decryptedPassword =
+          tempEncryptionService.decrypt(encryptedPassword);
       return password == decryptedPassword;
     } catch (e) {
       debugPrint('비밀번호 검증 중 오류 발생: $e');

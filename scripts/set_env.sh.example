@@ -1,7 +1,0 @@
-#!/bin/bash
-export GOOGLE_IOS_CLIENT_ID="your_ios_client_id_here"
-export GOOGLE_ANDROID_CLIENT_ID="your_android_client_id_here"
-
-flutter pub run flutter_dotenv:generate
-
-echo "completed."

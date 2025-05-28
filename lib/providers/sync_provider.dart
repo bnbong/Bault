@@ -27,12 +27,23 @@ class SyncProvider extends ChangeNotifier {
   /// 초기화
   Future<void> _initialize() async {
     _currentSyncType = await SyncServiceFactory.getCurrentSyncType();
-    _isSyncEnabled = await _serviceLocator.syncService.isSyncEnabled();
-    _lastSyncStatus = await _serviceLocator.syncService.getLastSyncStatus();
 
-    // 백업 목록 로드
-    if (_isSyncEnabled) {
-      await _loadBackupList();
+    final syncService = _serviceLocator.syncService;
+    if (syncService != null) {
+      _isSyncEnabled = await syncService.isSyncEnabled();
+      _lastSyncStatus = await syncService.getLastSyncStatus();
+
+      // 백업 목록 로드
+      if (_isSyncEnabled) {
+        await _loadBackupList();
+      }
+    } else {
+      // 동기화 서비스가 없는 경우 (웹 플랫폼 등)
+      _isSyncEnabled = false;
+      _lastSyncStatus = SyncStatus.notStarted;
+      if (kIsWeb) {
+        debugPrint('웹 플랫폼에서는 동기화 기능이 제한됩니다.');
+      }
     }
 
     notifyListeners();
@@ -73,15 +84,27 @@ class SyncProvider extends ChangeNotifier {
     await _serviceLocator.changeSyncType(newType);
 
     // 상태 초기화
-    _isSyncEnabled = await _serviceLocator.syncService.isSyncEnabled();
-    _lastSyncStatus = await _serviceLocator.syncService.getLastSyncStatus();
+    final syncService = _serviceLocator.syncService;
+    if (syncService != null) {
+      _isSyncEnabled = await syncService.isSyncEnabled();
+      _lastSyncStatus = await syncService.getLastSyncStatus();
+    } else {
+      _isSyncEnabled = false;
+      _lastSyncStatus = SyncStatus.notStarted;
+    }
 
     notifyListeners();
   }
 
   /// 동기화 활성화
   Future<bool> enableSync() async {
-    final success = await _serviceLocator.syncService.enableSync();
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      debugPrint('동기화 서비스를 사용할 수 없습니다.');
+      return false;
+    }
+
+    final success = await syncService.enableSync();
     if (success) {
       _isSyncEnabled = true;
       notifyListeners();
@@ -91,14 +114,25 @@ class SyncProvider extends ChangeNotifier {
 
   /// 동기화 비활성화
   Future<void> disableSync() async {
-    await _serviceLocator.syncService.disableSync();
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      debugPrint('동기화 서비스를 사용할 수 없습니다.');
+      return;
+    }
+
+    await syncService.disableSync();
     _isSyncEnabled = false;
     notifyListeners();
   }
 
   /// 수동 동기화 수행
   Future<SyncResult> syncNow() async {
-    final result = await _serviceLocator.syncService.syncNow();
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      return SyncResult.failed('동기화 서비스를 사용할 수 없습니다.');
+    }
+
+    final result = await syncService.syncNow();
     _lastSyncStatus = result.status;
     _lastSyncTime = result.timestamp;
     notifyListeners();
@@ -107,14 +141,26 @@ class SyncProvider extends ChangeNotifier {
 
   /// 자동 동기화 설정
   Future<void> setAutoSync(bool enabled, {Duration? interval}) async {
-    await _serviceLocator.syncService.setAutoSync(enabled, interval: interval);
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      debugPrint('동기화 서비스를 사용할 수 없습니다.');
+      return;
+    }
+
+    await syncService.setAutoSync(enabled, interval: interval);
     _isAutoSyncEnabled = enabled;
     notifyListeners();
   }
 
   /// 백업 생성
   Future<String?> createBackup() async {
-    final backupId = await _serviceLocator.syncService.createBackup();
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      debugPrint('동기화 서비스를 사용할 수 없습니다.');
+      return null;
+    }
+
+    final backupId = await syncService.createBackup();
     if (backupId != null) {
       await _loadBackupList(); // 백업 목록 갱신
     }
@@ -123,10 +169,15 @@ class SyncProvider extends ChangeNotifier {
 
   /// 백업 목록 로드
   Future<void> _loadBackupList() async {
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      return;
+    }
+
     _isLoadingBackups = true;
     notifyListeners();
 
-    _backupList = await _serviceLocator.syncService.getBackupList();
+    _backupList = await syncService.getBackupList();
 
     _isLoadingBackups = false;
     notifyListeners();
@@ -139,7 +190,12 @@ class SyncProvider extends ChangeNotifier {
 
   /// 백업 복원
   Future<SyncResult> restoreBackup(String backupId) async {
-    final result = await _serviceLocator.syncService.restoreBackup(backupId);
+    final syncService = _serviceLocator.syncService;
+    if (syncService == null) {
+      return SyncResult.failed('동기화 서비스를 사용할 수 없습니다.');
+    }
+
+    final result = await syncService.restoreBackup(backupId);
     if (result.status == SyncStatus.success) {
       _lastSyncStatus = SyncStatus.success;
       _lastSyncTime = DateTime.now();
